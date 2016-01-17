@@ -2,6 +2,7 @@
 #include <cmath>
 #include <fstream>
 #include <vector>
+#include "SOIL.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -41,11 +42,26 @@ GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path
 void drawBall(float rad) ;
 void quit(GLFWwindow *window);
 
+int width1=100, height1=100, channels;
+// unsigned char *ht_map = SOIL_load_image
+//   (
+//     "img_test.tga",
+//     &width1, &height1, &channels,
+//     SOIL_LOAD_L
+//   );
 
-float x_triangle = -2.0f, x_circle=1,y_circle=3, gravity=0.98,vx_circle=0,vy_circle=0;
+// // GLuint tex_2d = SOIL_load_OGL_texture
+// // (
+// //   "img.png",
+// //   SOIL_LOAD_AUTO,
+// //   SOIL_CREATE_NEW_ID,
+// //   SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_NTSC_SAFE_RGB | SOIL_FLAG_COMPRESS_TO_DXT
+// //   );
 
-float x_circle2=-30,y_circle2=-30,v_circle2 = 0.11 ,circle2_angle=86, vxi_circle2 = v_circle2*cos(DEG2RAD(circle2_angle)),vyi_circle2=v_circle2*sin(DEG2RAD(circle2_angle));
-float vx_circle2,vy_circle2;
+float x_triangle = -2.0f, x_circle=2,y_circle=70, gravity=0.98,vx_circle=0,vy_circle=0,circle1_rad=1.5,base = -20;
+
+float x_circle2=-30,y_circle2=-30,v_circle2 = 0.31 ,circle2_angle=90, vxi_circle2 = v_circle2*cos(DEG2RAD(circle2_angle)),vyi_circle2=v_circle2*sin(DEG2RAD(circle2_angle));
+float vx_circle2,vy_circle2,rect_height=8,rect_width = 8.4,rect_x=2,rect_y=0;
 
 float camera_rotation_angle = 90, rectangle_rotation = 0, triangle_rotation = 0, currtime,mass_circle=0.7;
 
@@ -133,7 +149,10 @@ struct VAO* create3DObject (GLenum primitive_mode, int numVertices, const GLfloa
         triangle_rot_status = !triangle_rot_status;
         break;
         case GLFW_KEY_D:
-        x_triangle += 0.1f;
+        x_circle += 0.1f;
+        break;
+        case GLFW_KEY_A:
+        x_circle += 0.1f;
         break;
         default:
         break;
@@ -144,10 +163,10 @@ struct VAO* create3DObject (GLenum primitive_mode, int numVertices, const GLfloa
     {
      switch (key) {
       case GLFW_KEY_A:
-      x_triangle -= 0.1f;
+      x_circle -= 0.1f;
       break;
       case GLFW_KEY_D:
-      x_triangle += 0.1f;
+      x_circle += 0.1f;
       break;
       default:
       break;
@@ -253,13 +272,13 @@ void createRectangle ()
 {
   // GL3 accepts only Triangles. Quads are not supported
   static const GLfloat vertex_buffer_data [] = {
-    -1.2,-1,0, // vertex 1
-    1.2,-1,0, // vertex 2
-    1.2, 1,0, // vertex 3
+    -4.2,-4,0, // vertex 1
+    4.2,-4,0, // vertex 2
+    4.2, 4,0, // vertex 3
 
-    1.2, 1,0, // vertex 3
-    -1.2, 1,0, // vertex 4
-    -1.2,-1,0  // vertex 1
+    4.2, 4,0, // vertex 3
+    -4.2, 4,0, // vertex 4
+    -4.2,-4,0  // vertex 1
   };
 
   static const GLfloat color_buffer_data [] = {
@@ -280,7 +299,11 @@ void drawBall(float rad)
   int i,k=0;
   GLfloat vertex_buffer_data[1090]={};
   GLfloat color_buffer_data[1090]={};
-  for (i = 0; i < 360; ++i)
+  vertex_buffer_data[k++]=0;
+  vertex_buffer_data[k++]=0;
+  vertex_buffer_data[k++]=0;
+
+  for (i = 1; i < 361; ++i)
   {
    vertex_buffer_data[k] = rad*cos(DEG2RAD(i));
    color_buffer_data[k] = rand()%2;
@@ -295,14 +318,41 @@ void drawBall(float rad)
    k++;
  }
 
- Circle = create3DObject(GL_TRIANGLE_FAN, 360, vertex_buffer_data, color_buffer_data, GL_FILL);
+ Circle = create3DObject(GL_TRIANGLE_FAN, 361, vertex_buffer_data, color_buffer_data, GL_FILL);
 }
 
-int fall_flag = 0,no_bounces=1;
+int fall_flag = 0,no_bounces=1,iscollide=0;
+
+void CheckCollision() // AABB - Circle collision
+{
+    // Get center point circle first 
+  glm::vec2 center(x_circle,y_circle);
+    // Calculate AABB info (center, half-extents)
+  glm::vec2 aabb_half_extents(rect_width / 2, rect_height / 2);
+  glm::vec2 aabb_center(rect_x,rect_y);
+    // Get difference vector between both centers
+  glm::vec2 difference = center - aabb_center;
+  glm::vec2 clamped = glm::clamp(difference, -aabb_half_extents, aabb_half_extents);
+    // Add clamped value to AABB_center and we get the value of box closest to circle
+  glm::vec2 closest = aabb_center + clamped;
+    // Retrieve vector between center circle and closest point AABB and check if length <= radius
+  difference = closest - center;
+  if( glm::length(difference) < circle1_rad)
+  {
+    base = y_circle - circle1_rad; 
+    iscollide =1;
+  }
+  else
+    iscollide =0 ;
+}  
+
+
 void Update()
 {
-  if(y_circle > -6.5f && vy_circle <= 0 )
+  CheckCollision();
+  if(y_circle - circle1_rad > base && vy_circle <= 0 && iscollide==0)
   {
+    // cout << base << endl;
     if(fall_flag == 0)
     {
       vy_circle = -vy_circle;
@@ -329,19 +379,19 @@ void Update()
 }
 void projectile()
 {
-    currtime = glfwGetTime();
-    vy_circle2 = vyi_circle2 - (gravity)*(currtime*0.08);
-    vx_circle2 = vxi_circle2;
-    x_circle2 += vx_circle2;
-    y_circle2 += vy_circle2 ;
-    no_bounces++; 
+  currtime = glfwGetTime();
+  vy_circle2 = vyi_circle2 - (gravity)*(currtime*0.08);
+  vx_circle2 = vxi_circle2;
+  x_circle2 += vx_circle2;
+  y_circle2 += vy_circle2 ;
+  no_bounces++; 
     // x_circle2 = vx_circle2*(currtime);
     // y_circle2 = vy_circle*(currtime) -0.5*gravity*(currtime)*(currtime);
-    if(y_circle2 < -30.2)
-    {
-      vy_circle2 = -vy_circle2;
-      cout << "vyb:  " <<  y_circle2 << endl;
-    }
+  if(y_circle2 < -30.2)
+  {
+    vy_circle2 = -vy_circle2;
+    // cout << "vyb:  " <<  y_circle2 << endl;
+  }
 
 }
 
@@ -366,25 +416,25 @@ void draw ()
   glm::mat4 MVP;	// MVP = Projection * View * Model
 
   // Load identity to model matrix
-  Matrices.model = glm::mat4(1.0f);
+  // Matrices.model = glm::mat4(1.0f);
 
 
-  glm::mat4 translateTriangle = glm::translate (glm::vec3(x_triangle, 0.0f, 0.0f)); // glTranslatef
-  glm::mat4 rotateTriangle = glm::rotate((float)(triangle_rotation*M_PI/180.0f), glm::vec3(0,0,1));  // rotate about vector (1,0,0)
-  glm::mat4 triangleTransform = translateTriangle * rotateTriangle;
-  Matrices.model *= triangleTransform; 
-  MVP = VP * Matrices.model; // MVP = p * V * M
-  glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
-  draw3DObject(triangle);
-
-  Matrices.model = glm::mat4(1.0f);
-
-  // glm::mat4 translateRectangle = glm::translate (glm::vec3(2, 0, 0));        // glTranslatef
-  // glm::mat4 rotateRectangle = glm::rotate((float)(rectangle_rotation*M_PI/120.0f), glm::vec3(0,0,1)); // rotate about vector (-1,1,1)
-  // Matrices.model *= (translateRectangle * rotateRectangle);
-  // MVP = VP * Matrices.model;
+  // glm::mat4 translateTriangle = glm::translate (glm::vec3(x_triangle, 0.0f, 0.0f)); // glTranslatef
+  // glm::mat4 rotateTriangle = glm::rotate((float)(triangle_rotation*M_PI/180.0f), glm::vec3(0,0,1));  // rotate about vector (1,0,0)
+  // glm::mat4 triangleTransform = translateTriangle * rotateTriangle;
+  // Matrices.model *= triangleTransform; 
+  // MVP = VP * Matrices.model; // MVP = p * V * M
   // glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
-  // draw3DObject(rectangle);
+  // draw3DObject(triangle);
+
+  Matrices.model = glm::mat4(1.0f);
+
+  glm::mat4 translateRectangle = glm::translate (glm::vec3(rect_x, rect_y, 0));        // glTranslatef
+  glm::mat4 rotateRectangle = glm::rotate((float)(0*M_PI/120.0f), glm::vec3(0,0,1)); // rotate about vector (-1,1,1)
+  Matrices.model *= (translateRectangle * rotateRectangle);
+  MVP = VP * Matrices.model;
+  glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
+  draw3DObject(rectangle);
 
   ///////////////////////////CIRCLE///////////////////////
   Matrices.model = glm::mat4(1.0f);
@@ -456,7 +506,7 @@ GLFWwindow* initGLFW (int width, int height)
 	createTriangle (); // Generate the VAO, VBOs, vertices data & copy into the array buffer
 	createRectangle ();
 	createTRI();
-  drawBall(1.5);
+  drawBall(circle1_rad);
 
   programID = LoadShaders( "Sample_GL.vert", "Sample_GL.frag" );
   Matrices.MatrixID = glGetUniformLocation(programID, "MVP");
@@ -508,6 +558,7 @@ int main (int argc, char** argv)
           last_update_time = current_time;
         }
       }
+      // SOIL_free_image_data( ht_map );
 
       glfwTerminate();
       exit(EXIT_SUCCESS);
