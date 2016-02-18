@@ -1,20 +1,4 @@
-  #include <iostream>
-#include <cmath>
-#include <fstream>
-#include <vector>
-#include "SOIL.h"
-
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-
-#define GLM_FORCE_RADIANS
-#include <glm/glm.hpp>
-#include <glm/gtx/transform.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-
-
-#define PI 3.141592653589
-#define DEG2RAD(deg) (deg * PI / 180)
+#include "Sample_GL3_2D.h"
 
 using namespace std;
 
@@ -60,7 +44,7 @@ int width1=100, height1=100, channels;
 
 float x_triangle = -2.0f, x_circle=2,y_circle=70, gravity=0.98,vx_circle=0,vy_circle=0,circle1_rad=1.5,base = -20;
 
-float x_circle2=-30,y_circle2=-30,v_circle2 = 0.31 ,circle2_angle=90, vxi_circle2 = v_circle2*cos(DEG2RAD(circle2_angle)),vyi_circle2=v_circle2*sin(DEG2RAD(circle2_angle));
+float x_circle2=-30,y_circle2=-30,v_circle2 = 0.31 ,circle2_angle=45, vxi_circle2 = v_circle2*cos(DEG2RAD(circle2_angle)),vyi_circle2=v_circle2*sin(DEG2RAD(circle2_angle));
 float vx_circle2,vy_circle2,rect_height=8,rect_width = 8.4,rect_x=2,rect_y=0;
 
 float camera_rotation_angle = 90, rectangle_rotation = 0, triangle_rotation = 0, currtime,mass_circle=0.7;
